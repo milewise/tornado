@@ -73,7 +73,7 @@ class WebSocketHandler(tornado.web.RequestHandler):
             "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
             "Upgrade: WebSocket\r\n"
             "Connection: Upgrade\r\n"
-            "Server: TornadoServer/0.1\r\n"
+            "Server: TornadoServer/0.2\r\n"
             "WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
             "WebSocket-Location: ws://" + self.request.host +
             self.request.path + "\r\n\r\n")

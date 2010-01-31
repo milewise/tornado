@@ -222,7 +222,7 @@ class WSGIContainer(object):
         body = escape.utf8(body)
         headers["Content-Length"] = str(len(body))
         headers.setdefault("Content-Type", "text/html; charset=UTF-8")
-        headers.setdefault("Server", "TornadoServer/0.1")
+        headers.setdefault("Server", "TornadoServer/0.2")
 
         parts = ["HTTP/1.1 " + data["status"] + "\r\n"]
         for key, value in headers.iteritems():
