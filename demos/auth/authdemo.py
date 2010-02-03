@@ -28,15 +28,15 @@ define("port", default=8888, help="run on the given port", type=int)
 
 class Application(tornado.web.Application):
     def __init__(self):
-        handlers = [
-            (r"/", MainHandler),
-            (r"/auth/login", AuthHandler),
-        ]
+        trivial_handlers = {
+            "/": MainHandler,
+            "/auth/login": AuthHandler,
+        }
         settings = dict(
             cookie_secret="32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
         )
-        tornado.web.Application.__init__(self, handlers, **settings)
+        tornado.web.Application.__init__(self, trivial_handlers=trivial_handlers, **settings)
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -60,7 +60,7 @@ class AuthHandler(BaseHandler, tornado.auth.GoogleMixin):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
         self.authenticate_redirect()
-    
+
     def _on_auth(self, user):
         if not user:
             raise tornado.web.HTTPError(500, "Google auth failed")
