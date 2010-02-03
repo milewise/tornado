@@ -35,7 +35,7 @@ distutils.core.setup(
     url="http://www.tornadoweb.org/",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     description="Tornado is an open source version of the scalable, non-blocking web server and and tools that power FriendFeed",
-    install_requirements = [
+    install_requires = [
         "Murmur",
     ],
 )
