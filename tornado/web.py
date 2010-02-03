@@ -59,6 +59,7 @@ import httplib
 import locale
 import logging
 import mimetypes
+import murmur
 import os.path
 import re
 import stat
@@ -652,17 +653,17 @@ class RequestHandler(object):
         hashes = RequestHandler._static_hashes
         if path not in hashes:
             try:
-                f = open(os.path.join(
+                def baseN(num,b): return "0" if num == 0 else ( baseN(num // b, b).lstrip("0") + "0123456789abcdefghijklmnopqrstuvwxyz"[num % b])
+                hash = murmur.file_hash(os.path.join(
                     self.application.settings["static_path"], path))
-                hashes[path] = hashlib.md5(f.read()).hexdigest()
-                f.close()
+                hashes[path] = baseN(hash, 36)
             except:
                 logging.error("Could not open static file %r", path)
                 hashes[path] = None
         base = self.request.protocol + "://" + self.request.host \
             if getattr(self, "include_host", False) else ""
         if hashes.get(path):
-            return base + "/static/" + path + "?v=" + hashes[path][:5]
+            return base + "/static/" + path + "?v=" + hashes[path]
         else:
             return base + "/static/" + path
 
