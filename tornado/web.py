@@ -843,9 +843,9 @@ class Application(object):
     Instances of this class are callable and can be passed directly to
     HTTPServer to serve the application:
 
-        application = web.Application([
-            (r"/", MainPageHandler),
-        ])
+        application = web.Application(trivial_handlers={
+            "/": MainPageHandler,
+        })
         http_server = httpserver.HTTPServer(application)
         http_server.listen(8080)
         ioloop.IOLoop.instance().start()
@@ -876,7 +876,7 @@ class Application(object):
     and we will serve /favicon.ico and /robots.txt from the same directory.
     """
     def __init__(self, handlers=None, default_host="", transforms=None,
-                 wsgi=False, **settings):
+                 wsgi=False, trivial_handlers=None, **settings):
         if transforms is None:
             self.transforms = []
             if settings.get("gzip"):
@@ -885,6 +885,7 @@ class Application(object):
         else:
             self.transforms = transforms
         self.handlers = []
+        self.trivial_handlers = {}
         self.named_handlers = {}
         self.default_host = default_host
         self.settings = settings
@@ -901,6 +902,7 @@ class Application(object):
                 (r"/(favicon\.ico)", StaticFileHandler, dict(path=path)),
                 (r"/(robots\.txt)", StaticFileHandler, dict(path=path)),
             ])
+        if trivial_handlers: self.trivial_handlers = trivial_handlers
         if handlers: self.add_handlers(".*$", handlers)
 
         # Automatically reload modified modules
@@ -978,16 +980,19 @@ class Application(object):
         handler = None
         args = []
         handlers = self._get_host_handlers(request)
-        if not handlers:
+        if not handlers and not self.trivial_handlers:
             handler = RedirectHandler(
                 request, "http://" + self.default_host + "/")
         else:
-            for spec in handlers:
-                match = spec.regex.match(request.path)
-                if match:
-                    handler = spec.handler_class(self, request, **spec.kwargs)
-                    args = match.groups()
-                    break
+            if request.path in self.trivial_handlers:
+                handler = self.trivial_handlers[request.path](self, request)
+            else:
+                for spec in handlers:
+                    match = spec.regex.match(request.path)
+                    if match:
+                        handler = spec.handler_class(self, request, **spec.kwargs)
+                        args = match.groups()
+                        break
             if not handler:
                 handler = ErrorHandler(self, request, 404)
 
