@@ -206,8 +206,8 @@ class RequestHandler(object):
         set by decorator 'validate'.
         """
         if hasattr(self.request, 'validation_errors') \
-           and 'name' in self.request.validation_errors:
-            return str(self.request.validation_errors['name'])
+           and name in self.request.validation_errors:
+            return str(self.request.validation_errors[name])
         return None
 
     @property
