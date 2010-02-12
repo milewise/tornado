@@ -43,5 +43,6 @@ distutils.core.setup(
     description="Tornado is an open source version of the scalable, non-blocking web server and and tools that power FriendFeed",
     install_requires = [
         "Murmur",
+        "FormEncode >= 1.2.2",
     ],
 )
