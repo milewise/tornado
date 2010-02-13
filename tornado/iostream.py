@@ -21,6 +21,7 @@ import ioloop
 import logging
 import socket
 
+from cStringIO import StringIO as SIO
 
 class IOStream(object):
     """A utility class to write to and read from a non-blocking socket.
@@ -66,9 +67,12 @@ class IOStream(object):
         self.io_loop = io_loop or ioloop.IOLoop.instance()
         self.max_buffer_size = max_buffer_size
         self.read_chunk_size = read_chunk_size
-        self._read_buffer = ""
+        #self._read_buffer = ""
+        self._read_buffer = SIO()
+        self._last_chunk = None
         self._write_buffer = ""
         self._read_delimiter = None
+        self._read_checker = None
         self._read_bytes = None
         self._read_callback = None
         self._write_callback = None
@@ -80,7 +84,7 @@ class IOStream(object):
     def read_until(self, delimiter, callback):
         """Call callback when we read the given delimiter."""
         assert not self._read_callback, "Already reading"
-        loc = self._read_buffer.find(delimiter)
+        loc = self._read_buffer.getvalue().find(delimiter)
         if loc != -1:
             callback(self._consume(loc + len(delimiter)))
             return
@@ -89,10 +93,21 @@ class IOStream(object):
         self._read_callback = callback
         self._add_io_state(self.io_loop.READ)
 
+    def read_checked(self, checker, callback):
+        """Call callback when we read the given delimiter."""
+        assert not self._read_callback, "Already reading"
+        if checker(self._read_buffer, self._last_chunk):
+            callback(self._consume(self._read_buffer.tell()))
+            return
+        self._check_closed()
+        self._read_checker = checker
+        self._read_callback = callback
+        self._add_io_state(self.io_loop.READ)
+
     def read_bytes(self, num_bytes, callback):
         """Call callback when we read the given number of bytes."""
         assert not self._read_callback, "Already reading"
-        if len(self._read_buffer) >= num_bytes:
+        if self._read_buffer.tell() >= num_bytes:
             callback(self._consume(num_bytes))
             return
         self._check_closed()
@@ -152,7 +167,7 @@ class IOStream(object):
             self.close()
             return
         state = self.io_loop.ERROR
-        if self._read_delimiter or self._read_bytes:
+        if self._read_delimiter or self._read_bytes or self._read_checker:
             state |= self.io_loop.READ
         if self._write_buffer:
             state |= self.io_loop.WRITE
@@ -171,23 +186,31 @@ class IOStream(object):
                                 self.socket.fileno(), e)
                 self.close()
                 return
-        if not chunk:
+
+        self._last_chunk = chunk
+        if not chunk and not self._read_checker:
             self.close()
             return
-        self._read_buffer += chunk
-        if len(self._read_buffer) >= self.max_buffer_size:
+
+        self._read_buffer.write(chunk)
+        if self._read_buffer.tell() >= self.max_buffer_size:
             logging.error("Reached maximum read buffer size")
             self.close()
             return
-        if self._read_bytes:
-            if len(self._read_buffer) >= self._read_bytes:
+        if self._read_checker and self._read_checker(self._read_buffer, self._last_chunk):
+            callback = self._read_callback
+            self._read_callback = None
+            self._read_checker = None
+            callback(self._consume(self._read_buffer.tell()))
+        elif self._read_bytes:
+            if self._read_buffer.tell() >= self._read_bytes:
                 num_bytes = self._read_bytes
                 callback = self._read_callback
                 self._read_callback = None
                 self._read_bytes = None
                 callback(self._consume(num_bytes))
         elif self._read_delimiter:
-            loc = self._read_buffer.find(self._read_delimiter)
+            loc = self._read_buffer.getvalue().find(self._read_delimiter)
             if loc != -1:
                 callback = self._read_callback
                 delimiter_len = len(self._read_delimiter)
@@ -214,8 +237,11 @@ class IOStream(object):
             callback()
 
     def _consume(self, loc):
-        result = self._read_buffer[:loc]
-        self._read_buffer = self._read_buffer[loc:]
+        self._read_buffer.seek(0)
+        result = self._read_buffer.read(loc)
+        new_buffer = SIO()
+        new_buffer.write(self._read_buffer.read())
+        self._read_buffer = new_buffer
         return result
 
     def _check_closed(self):
