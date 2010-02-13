@@ -21,7 +21,7 @@ import ioloop
 import logging
 import socket
 
-from cStringIO import StringIO as SIO
+from cStringIO import StringIO
 
 class IOStream(object):
     """A utility class to write to and read from a non-blocking socket.
@@ -67,8 +67,7 @@ class IOStream(object):
         self.io_loop = io_loop or ioloop.IOLoop.instance()
         self.max_buffer_size = max_buffer_size
         self.read_chunk_size = read_chunk_size
-        #self._read_buffer = ""
-        self._read_buffer = SIO()
+        self._read_buffer = StringIO()
         self._last_chunk = None
         self._write_buffer = ""
         self._read_delimiter = None
@@ -239,7 +238,7 @@ class IOStream(object):
     def _consume(self, loc):
         self._read_buffer.seek(0)
         result = self._read_buffer.read(loc)
-        new_buffer = SIO()
+        new_buffer = StringIO()
         new_buffer.write(self._read_buffer.read())
         self._read_buffer = new_buffer
         return result
