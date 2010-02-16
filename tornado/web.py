@@ -210,6 +210,34 @@ class RequestHandler(object):
             return str(self.request.validation_errors[name])
         return None
 
+    def value_for(self, name):
+        """Returns the value for the field specified by the given name,
+        if exists. Else None.
+
+        If available the validated value will be returned, else the
+        unvalidated one. In the latter case a warning will be issued."""
+        if hasattr(self.request, 'input_values') \
+           and name in self.request.input_values:
+            return self.request.input_values[name]
+        elif name in self.request.arguments:
+            logging.warning("Acces to unvalidated argument %s. "
+                            "Please consider using validators!",
+                            name)
+            if len(self.request.arguments[name]) > 1:
+                return self.request.arguments[name]
+            else:
+                return self.request.arguments[name][0]
+        else:
+            return None
+
+    @property
+    def has_validation_errors(self):
+        """Returns True if request has validation errors."""
+        if hasattr(self.request, 'validation_errors') \
+           and len(self.request.validation_errors) > 0:
+            return True
+        return False
+
     @property
     def cookies(self):
         """A dictionary of Cookie.Morsel objects."""
@@ -442,6 +470,8 @@ class RequestHandler(object):
             _=self.locale.translate,
             static_url=self.static_url,
             xsrf_form_html=self.xsrf_form_html,
+            error_for=self.error_for,
+            value_for=self.value_for,
             reverse_url=self.application.reverse_url
         )
         args.update(self.ui)
