@@ -31,13 +31,13 @@ define("port", default=8888, help="run on the given port", type=int)
 
 class Application(tornado.web.Application):
     def __init__(self):
-        handlers = [
-            (r"/", MainHandler),
-            (r"/auth/login", AuthLoginHandler),
-            (r"/auth/logout", AuthLogoutHandler),
-            (r"/a/message/new", MessageNewHandler),
-            (r"/a/message/updates", MessageUpdatesHandler),
-        ]
+        trivial_handlers = {
+            "/": MainHandler,
+            "/auth/login": AuthLoginHandler,
+            "/auth/logout": AuthLogoutHandler,
+            "/a/message/new": MessageNewHandler,
+            "/a/message/updates": MessageUpdatesHandler,
+        }
         settings = dict(
             cookie_secret="43oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
@@ -45,7 +45,7 @@ class Application(tornado.web.Application):
             static_path=os.path.join(os.path.dirname(__file__), "static"),
             xsrf_cookies=True,
         )
-        tornado.web.Application.__init__(self, handlers, **settings)
+        tornado.web.Application.__init__(self, trivial_handlers=trivial_handlers, **settings)
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -131,7 +131,7 @@ class AuthLoginHandler(BaseHandler, tornado.auth.GoogleMixin):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
         self.authenticate_redirect(ax_attrs=["name"])
-    
+
     def _on_auth(self, user):
         if not user:
             raise tornado.web.HTTPError(500, "Google auth failed")

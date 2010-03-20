@@ -35,11 +35,11 @@ define("facebook_secret", help="your Facebook application secret",
 
 class Application(tornado.web.Application):
     def __init__(self):
-        handlers = [
-            (r"/", MainHandler),
-            (r"/auth/login", AuthLoginHandler),
-            (r"/auth/logout", AuthLogoutHandler),
-        ]
+        trivial_handlers = {
+            "/": MainHandler,
+            "/auth/login": AuthLoginHandler,
+            "/auth/logout": AuthLogoutHandler,
+        }
         settings = dict(
             cookie_secret="12oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
@@ -51,7 +51,7 @@ class Application(tornado.web.Application):
             ui_modules= {"Post": PostModule},
             debug=True,
         )
-        tornado.web.Application.__init__(self, handlers, **settings)
+        tornado.web.Application.__init__(self, trivial_handlers=trivial_handlers, **settings)
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -87,7 +87,7 @@ class AuthLoginHandler(BaseHandler, tornado.auth.FacebookMixin):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
         self.authorize_redirect("read_stream")
-    
+
     def _on_auth(self, user):
         if not user:
             raise tornado.web.HTTPError(500, "Facebook auth failed")

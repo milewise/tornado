@@ -36,14 +36,16 @@ define("mysql_password", default="blog", help="blog database password")
 
 class Application(tornado.web.Application):
     def __init__(self):
+        trivial_handlers = {
+            "/": HomeHandler,
+            "/archive": ArchiveHandler,
+            "/feed": FeedHandler,
+            "/compose": ComposeHandler,
+            "/auth/login": AuthLoginHandler,
+            "/auth/logout": AuthLogoutHandler,
+        }
         handlers = [
-            (r"/", HomeHandler),
-            (r"/archive", ArchiveHandler),
-            (r"/feed", FeedHandler),
             (r"/entry/([^/]+)", EntryHandler),
-            (r"/compose", ComposeHandler),
-            (r"/auth/login", AuthLoginHandler),
-            (r"/auth/logout", AuthLogoutHandler),
         ]
         settings = dict(
             blog_title=u"Tornado Blog",
@@ -54,7 +56,9 @@ class Application(tornado.web.Application):
             cookie_secret="11oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
         )
-        tornado.web.Application.__init__(self, handlers, **settings)
+        tornado.web.Application.__init__(self, handlers,
+                                         trivial_handlers=trivial_handlers,
+                                         **settings)
 
         # Have one global connection to the blog DB across all handlers
         self.db = tornado.database.Connection(
@@ -151,7 +155,7 @@ class AuthLoginHandler(BaseHandler, tornado.auth.GoogleMixin):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
         self.authenticate_redirect()
-    
+
     def _on_auth(self, user):
         if not user:
             raise tornado.web.HTTPError(500, "Google auth failed")
